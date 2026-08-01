@@ -1,0 +1,7 @@
+[
+  {"title":"Voice-driven narrative RPG","description":"A Unity RPG-lite prototype where players communicate with characters using natural speech. I designed the dialogue pipeline, voice processing, NPC behaviour, transaction flows, logging, and evaluation.","technologies":["Unity","C#","Python","FastAPI","Sherpa-ONNX","Local LLMs"]},
+  {"title":"IoT monitoring station","description":"An ESP8266 environmental monitoring system with multiple sensors, MQTT communication, configurable thresholds, and a browser dashboard.","technologies":["C++","ESP8266","MQTT","JavaScript","Embedded"]},
+  {"title":"Prosody analysis tools","description":"Python tools for extracting and comparing energy, pitch, pauses, voiced segments, and speaking activity to explore emotion-aware dialogue.","technologies":["Python","Audio processing","Data analysis"]},
+  {"title":"Desktop utility applications","description":"Qt and PyQt6 applications with multi-screen interfaces, form validation, date and time selection, and external application integration.","technologies":["Python","PyQt6","Qt Designer"]},
+  {"title":"Embedded & FPGA exercises","description":"Interrupts, UART communication, digital audio filtering, parallel processing, and neural-network inference on a Zynq development board.","technologies":["C","C++","Zybo Z7","FPGA","ARM"]}
+]
