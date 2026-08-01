@@ -2,10 +2,10 @@ import { renderProjects } from "./components/projectList.js";
 import { getProjects } from "./services/projectService.js";
 
 const PROFILE = {
-  // Replace these placeholders before publishing your site.
-  email: "your.email@example.com",
-  github: "https://github.com/",
-  linkedin: "https://www.linkedin.com/",
+  // TODO: Update the profile information below
+  email: "daniel.vasko.swe@gmail.com",
+  github: "https://github.com/BaroRai",
+  linkedin: "https://www.linkedin.com/in/daniel-va%C5%A1ko-b42143197/?lipi=urn%3Ali%3Apage%3Ad_flagship3_profile_view_base_contact_details%3BQmyLYXXtRk%2BaqawBrvPZGw%3D%3D",
 };
 
 function initializeNavigation() {
