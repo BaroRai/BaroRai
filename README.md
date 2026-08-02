@@ -12,6 +12,13 @@ python3 -m http.server 8000
 
 Then visit <http://localhost:8000>.
 
+## Traffic statistics
+
+Each page loads GoatCounter asynchronously and reports visits to the
+`barorai.goatcounter.com` site. Visit that GoatCounter dashboard to view the
+daily traffic graph and page statistics; no analytics data is stored in this
+static repository or fetched for display to portfolio visitors.
+
 ## Customize before publishing
 
 1. Update the contact placeholders in `js/app.js`.
