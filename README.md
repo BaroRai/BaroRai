@@ -1,4 +1,4 @@
-# Daniel Vasko — Portfolio
+# Daniel Vasko / Portfolio
 
 A minimal, responsive multi-page portfolio prepared for GitHub Pages. It uses plain HTML, CSS, and JavaScript, so there is no build step or framework dependency.
 
