@@ -7,6 +7,13 @@ function projectCard(project, index) {
     <div class="project-copy"><p></p><div class="tags"></div></div>`;
   article.querySelector("h3").textContent = project.title;
   article.querySelector("p").textContent = project.description;
+  if (project.url) {
+    const link = document.createElement("a");
+    link.className = "text-link";
+    link.href = project.url;
+    link.textContent = "Play Dutchman ↗";
+    article.querySelector(".project-copy").append(link);
+  }
   const tags = article.querySelector(".tags");
   project.technologies.forEach((technology) => {
     const tag = document.createElement("span");
