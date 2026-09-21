@@ -19,13 +19,6 @@ Each page loads GoatCounter asynchronously and reports visits to the
 daily traffic graph and page statistics; no analytics data is stored in this
 static repository or fetched for display to portfolio visitors.
 
-## Customize before publishing
-
-1. Update the contact placeholders in `js/app.js`.
-2. Edit project content in `data/projects.json`.
-3. Add a CV under `assets/` and link it from the hero when ready.
-4. In the repository settings, set **Pages → Build and deployment → Deploy from a branch**, then select this branch and `/ (root)`.
-
 ## Architecture
 
 ```text
