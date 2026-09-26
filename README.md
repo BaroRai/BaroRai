@@ -1,6 +1,6 @@
 # Daniel Vasko / Portfolio
 
-A minimal, responsive multi-page portfolio prepared for GitHub Pages. It uses plain HTML, CSS, and JavaScript, so there is no build step or framework dependency.
+A minimal, responsive multi-page portfolio prepared for GitHub Pages. It uses plain HTML, CSS, and JavaScript, so the portfolio has no build step or framework dependency. The separate Dutchman game uses TypeScript, Three.js and a Vite build; its committed output is served at `games/dutchman/`.
 
 ## Run locally
 
@@ -30,3 +30,7 @@ Local JSON now; GitHub API or an external backend later
 ```
 
 GitHub Pages is a static host and cannot safely store login credentials or accept uploads by itself. A future gallery admin should authenticate through a trusted external backend (or a carefully scoped OAuth flow), compress images in the browser, validate them on the server, and then use the GitHub API or object storage. Never put a GitHub token in client-side JavaScript.
+
+## Dutchman and agent navigation
+
+See [AGENTS.md](AGENTS.md) for the repository map and [dutchman-source/README.md](dutchman-source/README.md) for game build and play instructions. Edit game source in `dutchman-source/`, not generated files in `games/dutchman/`.
