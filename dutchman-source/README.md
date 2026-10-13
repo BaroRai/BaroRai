@@ -18,17 +18,17 @@ The generated game is committed so the existing GitHub Pages branch publishing s
 
 ## Controls
 
-W accelerates; S brakes; A/D steer. Hold Q for port or E for starboard and release to return to chase view. Mouse wheel or up/down arrows adjust elevation. Click or Space fires the selected side; holding repeats after reload. Esc pauses. Losing focus pauses and clears input. Sound starts muted and is synthesized locally.
+W accelerates; S brakes; A/D steer. Hold Q for port or E for starboard and release to return to chase view. Mouse wheel or up/down arrows adjust elevation. Click or Space fires the selected side while Q/E is held, or both sides from chase view; holding repeats after each side reloads. Aiming moves the camera toward the stern and fades player sails. Esc pauses. Losing focus pauses and clears input. Sound starts muted and is synthesized locally.
 
 ## Simulation and limits
 
-Fixed 60 Hz simulation, capped frame catch-up, GPU Gerstner water using shared CPU coefficients, inverse horizontal displacement for float sampling, five-point damped buoyancy, swept projectile collision, simple ship/island collision, 1.2 km square bounded map, eight enemies with capped replacement spawns, 60 loot crates maximum, 93 projectiles maximum (three-shot volleys admitted while the active count is at most 90), and 160 effect particles maximum. Ship and island meshes are merged by material. No backend or runtime AI calls. Personal best uses optional localStorage; the game works when storage is unavailable.
+Fixed 60 Hz simulation, capped frame catch-up, GPU Gerstner water using shared CPU coefficients, inverse horizontal displacement for float sampling, five-point damped buoyancy, swept projectile collision, simple ship/island collision, 1.2 km square bounded map, eight enemies with capped replacement spawns, 60 loot crates maximum, 93 projectiles maximum (a full broadside must fit before firing), and 160 effect particles maximum. Ship and island meshes are merged by material. No backend or runtime AI calls. Personal best uses optional localStorage; the game works when storage is unavailable.
 
 Enemy states are patrol and engage, with island avoidance and broadside alignment. Collision hulls are simplified spheres rather than detailed meshes. This is an arcade adaptation, not a reproduction of Unity physics. Touch controls and multiplayer are out of scope. Enemy aiming and difficulty need player feedback. Fonts use Google Fonts with local system fallbacks.
 
 ## Tuning
 
-`src/physics.ts`: world extent and wave directions/amplitudes/wavelengths/speeds. `src/main.ts`: ship sizes, movement, enemy engagement radius, muzzle speed, damage, reload durations, loot rewards and island layout. `src/style.css`: presentation. `tests/physics.test.ts` checks wave/render alignment, ballistic flight, swept hits and angular wrapping.
+`src/physics.ts`: world extent and wave directions/amplitudes/wavelengths/speeds. `src/ship-layout.ts`: capped hull dimensions, decks, shared cannon rows and minimap coordinates. `src/main.ts`: procedural model construction, movement, enemy engagement radius, muzzle speed, damage, reload durations, loot rewards and island layout. `src/style.css`: presentation. `tests/physics.test.ts` checks wave/render alignment, ballistic flight, swept hits and angular wrapping. `tests/ship-layout.test.ts` checks upgrade bounds, cannon spacing, map direction, firing selection and cached trajectory equivalence. Upgrade purchasing is not implemented; voyages still start with the original ship configuration.
 
 Three.js is MIT licensed; see `../games/dutchman/THIRD_PARTY_LICENSES.txt`.
 
