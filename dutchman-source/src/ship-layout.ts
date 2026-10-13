@@ -2,6 +2,7 @@
 export const SHIP_LIMITS = Object.freeze({lengthExtensions:3,widthUpgrades:2,decks:3,cannonsPerRow:6});
 export type ShipUpgrades = {lengthExtensions:number,widthUpgrades:number,decks:number,cannonsPerRow:number};
 export type CannonMount = {side:-1|1,deck:number,x:number,y:number,z:number};
+export type Armament = {port:number,starboard:number};
 const bounded = (value:number,min:number,max:number) => Number.isFinite(value)?Math.max(min,Math.min(max,Math.floor(value))):min;
 
 export class ShipLayout {
@@ -9,11 +10,13 @@ export class ShipLayout {
   readonly length:number;
   readonly width:number;
   readonly deckRise:number;
+  readonly rowCapacity:number;
+  readonly armament:Readonly<Armament>;
   readonly rows:ReadonlyArray<ReadonlyArray<Readonly<CannonMount>>>;
   private readonly port:ReadonlyArray<Readonly<CannonMount>>;
   private readonly starboard:ReadonlyArray<Readonly<CannonMount>>;
 
-  constructor(upgrades:Partial<ShipUpgrades> = {}) {
+  constructor(upgrades:Partial<ShipUpgrades> = {},armament?:Partial<Armament>) {
     const lengthExtensions=bounded(upgrades.lengthExtensions??0,0,SHIP_LIMITS.lengthExtensions);
     const widthUpgrades=bounded(upgrades.widthUpgrades??0,0,SHIP_LIMITS.widthUpgrades);
     const decks=bounded(upgrades.decks??1,1,SHIP_LIMITS.decks);
@@ -23,9 +26,13 @@ export class ShipLayout {
     this.length=16+lengthExtensions*3;
     this.width=7+widthUpgrades*2;
     this.deckRise=(decks-1)*3;
+    this.rowCapacity=Math.min(SHIP_LIMITS.cannonsPerRow,3+lengthExtensions);
+    const capacity=this.rowCapacity*decks;
+    this.armament=Object.freeze({port:bounded(armament?.port??cannonsPerRow*decks,0,capacity),starboard:bounded(armament?.starboard??cannonsPerRow*decks,0,capacity)});
     const rows:CannonMount[][]=[];
     for(const side of [-1,1] as const)for(let deck=0;deck<decks;deck++){
-      rows.push(Array.from({length:cannonsPerRow},(_,i)=>Object.freeze({side,deck,x:-side*(this.width/2+1.25),y:3.6+deck*3,z:(i-(cannonsPerRow-1)/2)*3})));
+      const count=armament?Math.max(0,Math.min(this.rowCapacity,this.armament[side<0?'port':'starboard']-deck*this.rowCapacity)):cannonsPerRow;
+      if(count)rows.push(Array.from({length:count},(_,i)=>Object.freeze({side,deck,x:-side*(this.width/2+1.25),y:3.6+deck*3,z:(i-(count-1)/2)*3})));
     }
     this.rows=Object.freeze(rows.map(row=>Object.freeze(row)));
     this.port=Object.freeze(rows.filter(row=>row[0].side===-1).flat());

@@ -5,6 +5,28 @@ export function waveHeight(x:number,z:number,t:number){let u=x,v=z;for(let j=0;j
 export function ballistic(origin:{x:number,y:number,z:number},velocity:{x:number,y:number,z:number},t:number){return{x:origin.x+velocity.x*t,y:origin.y+velocity.y*t-4.905*t*t,z:origin.z+velocity.z*t};}
 // Shared local trajectory: mirror x for the other broadside, add forward speed*t,
 // then translate to each muzzle. Neither the launch point nor cached samples mutate.
-export function trajectorySamples(angle:number,speed:number){return Array.from({length:101},(_,i)=>{const t=i*.09;return Object.freeze({...ballistic({x:0,y:0,z:0},{x:speed*Math.cos(angle),y:speed*Math.sin(angle),z:0},t),t});});}
+export const SHOT_LIFETIME=12;
+export const ARC_SAMPLE_COUNT=Math.ceil(SHOT_LIFETIME/.09)+1;
+export function trajectorySamples(angle:number,speed:number){return Array.from({length:ARC_SAMPLE_COUNT},(_,i)=>{const t=Math.min(SHOT_LIFETIME,i*.09);return Object.freeze({...ballistic({x:0,y:0,z:0},{x:speed*Math.cos(angle),y:speed*Math.sin(angle),z:0},t),t});});}
+type Point3={x:number,y:number,z:number};
+export type Obstacle={x:number,z:number,r:number,height:number};
+// Preview and live shots use identical terrain geometry and the same future wave clock.
+// Horizontal flight is linear; cylinder entry is analytic, vertical contact is refined.
+export function trajectoryImpact(origin:Point3,velocity:Point3,from:number,to:number,launchTime:number,obstacles:readonly Obstacle[]){
+  const a=ballistic(origin,velocity,from),b=ballistic(origin,velocity,to);
+  let age=Infinity,kind:'water'|'land'='water';
+  const below=(t:number)=>{const p=ballistic(origin,velocity,t);return p.y<=waveHeight(p.x,p.z,launchTime+t);};
+  if(below(from))age=from;
+  else if(below(to)){let lo=from,hi=to;for(let i=0;i<9;i++){const mid=(lo+hi)/2;if(below(mid))hi=mid;else lo=mid;}age=hi;}
+  for(const o of obstacles){
+    const dx=b.x-a.x,dz=b.z-a.z,ox=a.x-o.x,oz=a.z-o.z,A=dx*dx+dz*dz,B=2*(ox*dx+oz*dz),C=ox*ox+oz*oz-o.r*o.r;
+    let enter=0,leave=1;
+    if(A<1e-12){if(C>0)continue;}else{const disc=B*B-4*A*C;if(disc<0)continue;enter=Math.max(0,(-B-Math.sqrt(disc))/(2*A));leave=Math.min(1,(-B+Math.sqrt(disc))/(2*A));if(enter>leave)continue;}
+    let lo=from+(to-from)*enter,hi=from+(to-from)*leave;
+    if(ballistic(origin,velocity,lo).y>o.height){if(ballistic(origin,velocity,hi).y>o.height)continue;for(let i=0;i<9;i++){const mid=(lo+hi)/2;if(ballistic(origin,velocity,mid).y<=o.height)hi=mid;else lo=mid;}lo=hi;}
+    if(lo<age){age=lo;kind='land';}
+  }
+  return Number.isFinite(age)?{age,kind,point:ballistic(origin,velocity,age)}:null;
+}
 export function angleDelta(a:number,b:number){return Math.atan2(Math.sin(a-b),Math.cos(a-b));}
 export function segmentSphere(a:{x:number,y:number,z:number},b:{x:number,y:number,z:number},c:{x:number,y:number,z:number},r:number){const dx=b.x-a.x,dy=b.y-a.y,dz=b.z-a.z;const den=dx*dx+dy*dy+dz*dz;const t=den?Math.max(0,Math.min(1,((c.x-a.x)*dx+(c.y-a.y)*dy+(c.z-a.z)*dz)/den)):0;return Math.hypot(a.x+t*dx-c.x,a.y+t*dy-c.y,a.z+t*dz-c.z)<=r;}
