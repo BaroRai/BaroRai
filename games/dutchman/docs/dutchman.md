@@ -4,7 +4,7 @@ Use root `AGENTS.md` for paths and task routing. This document describes existin
 
 ## Lifecycle and data flow
 
-`dutchman-source/index.html` loads `src/main.ts`, which imports Three.js, `mergeGeometries`, pure physics helpers and game CSS. Top-level code creates renderer/lights/camera, materials, ship template cache, ocean, seven islands, 80 boundary buoys plus the harbour ring, crate/effect templates, listeners and state. `reset()` builds the initial fleet before the first `requestAnimationFrame(frame)`. There is no application class, entity-component system or external asset loading phase.
+`games/dutchman/source/index.html` loads `src/main.ts`, which imports the extracted ship-model.ts and rendering.ts modules, Three.js, pure physics helpers and game CSS. Top-level code creates renderer/lights/camera, materials, ship template cache, ocean, seven islands, 80 boundary buoys plus the harbour ring, crate/effect templates, listeners and state. `reset()` builds the initial fleet before the first `requestAnimationFrame(frame)`. There is no application class, entity-component system or external asset loading phase.
 
 Entities are plain records with Three.js objects: `Ship`, `Shot`, `Loot`, `Effect`, `Island`. Mutable arrays and globals connect all systems. `player` also belongs to `ships`; shots retain their owner record even after that ship is removed. Enemy templates/clones share geometry and materials. Player geometry is owned by that player: `buyUpgrade` and `reset` dispose it on replacement, never the shared materials. The player sail has a separate material from enemy sails; `frame` fades it to 20% opacity while aiming and restores it afterward. Shots and effects recycle meshes; loot clones are removed from the scene on collection/expiry. Do not dispose shared resources during individual entity removal.
 
@@ -65,14 +65,14 @@ The shipyard opens via F/click only within `canDock`; it freezes simulation and 
 - `$()` asserts every HTML ID exists, and minimap context is non-null asserted. HTML IDs, `hud`, menu handlers and CSS body classes must remain aligned.
 - Random placement/AI uses `Math.random`; there is no seeded replay or deterministic end-to-end gameplay test. Unit tests do not cover menus, AI, score, restart or audio.
 - WebGL-unavailable/context-loss UI is handled separately from normal death; context loss disables the start button and requests reload. Preserve that distinction.
-- `consolidate` creates temporary geometries, and dynamic loops allocate vectors/arrays. Resource ownership and performance may merit a later focused review; no pooling/disposal rewrite is part of this cleanup.
+- rendering.ts consumes procedural input geometry and releases temporary merged inputs, including indexed conversions. Materials remain borrowed. Never pass shared scene/template geometry into consolidate. Combat reuses collision scratch vectors and updates cooldowns in place. Ship iteration is direct: movement does not remove ships, and projectile collision breaks immediately after a possible sink. Preserve these iteration contracts. Camera interpolation reuses target vectors; ballistic prediction still allocates points and merits profiling before further changes.
 - `tsx` remains a dev dependency although the test script uses Node's native type stripping. Dependency cleanup would change the lockfile/tooling and is deferred.
 
 Unity heritage is conceptual: Gerstner waves, five-point float sampling, side cameras and ballistic equations. There are no `.cs`, Unity prefabs/scenes, imported Unity meshes or Unity update callbacks in this repository. The game uses custom arcade math and Three.js, not Unity physics.
 
 ## Verification checklist
 
-1. Run `pnpm test` and `pnpm build` in `dutchman-source`; run `git diff --check`. Vite's >500 KB uncompressed chunk warning is currently expected; inspect real errors separately.
+1. Run `pnpm test` and `pnpm build` in `games/dutchman/source`; run `git diff --check`. Vite's >500 KB uncompressed chunk warning is currently expected; inspect real errors separately.
 2. Serve repository root; open `/games/dutchman/`. Check intro, ocean, ships, islands, no missing assets or console errors; start voyage.
 3. Check W acceleration/S brake, A/D turning, held Q/E side views and release-to-chase and sail opacity restoration, Q-only/E-only fire, both-side fire from chase, independent reloads, wheel and arrows, reload bars and aiming arc.
 4. Check nearby enemies approach/turn/fire; observe projectile hits and hull damage. Check islands, ship contact, world boundary and water impacts as time allows.
@@ -83,3 +83,15 @@ Unity heritage is conceptual: Gerstner waves, five-point float sampling, side ca
 9. Follow homepage/Projects game links and game's return link using static production paths. Touch gameplay is not implemented.
 
 For documentation/comment-only changes, byte-identical regenerated JS/CSS/HTML plus unchanged tests provide a useful regression guard. Record which interactive checks actually ran, and distinguish untested flows from verified ones.
+
+## Module boundaries and extension workflow
+
+The repository separates portfolio/ from games/dutchman/. The game contains source/, docs/, and generated dist/; its index.html keeps the previous game URL working. Vite empties dist/ only. Root index.html forwards to portfolio/. Former /pages/*.html URLs now live under /portfolio/pages/*.html.
+
+ShipLayout remains the authoritative source of dimensions, deck capacity and cannon mounts. progression.ts owns purchase validation, save normalization and derived stats. ship-model.ts turns a supplied layout/equipment/material palette into an owned Group without accessing scene state, DOM or persistence. rendering.ts owns procedural geometry consolidation and disposal. main.ts connects these modules and preserves the simulation order above. Enemy template cache keys include equipment as well as layout and installed armament, so future enemy equipment variants cannot reuse the wrong visual model.
+
+To add an upgrade, update the catalogue/caps, save normalization, stats and model appearance together; keep purchase validation in progression.ts and muzzle placement in ShipLayout. Add regression coverage for save round trips, capacity, asymmetric armament and the resulting model. Do not dispose materials when replacing a player model or dispose shared enemy template geometry when removing a clone.
+
+## Verification of this refactor
+
+18 Node tests pass, including new geometry ownership and base/asymmetric/maximum ship model tests. TypeScript and the production build pass. Browser smoke checks cover rendering, starting, safe harbour/shipyard prerequisites, sailing, both broadside reloads, pause/resume, ship stats and portfolio navigation. No frame-rate improvement is claimed: this change removes identifiable allocation/disposal overhead; a controlled hardware benchmark remains future work. Full death/restart, audible sound and purchasing with earned funds are not covered by this smoke run.

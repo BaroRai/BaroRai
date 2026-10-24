@@ -1,5 +1,6 @@
 import * as T from 'three';
-import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
+import {mesh,box,consolidate,disposeGeometry} from './rendering.ts';
+import {makeShip} from './ship-model.ts';
 import {WORLD,WAVES,waveHeight,ballistic,angleDelta,segmentSphere,trajectorySamples,trajectoryImpact,SHOT_LIFETIME,ARC_SAMPLE_COUNT} from './physics';
 import {BASE_SHIP,SHIP_LIMITS,ShipLayout,firingSides,chartPoint,chartHeading} from './ship-layout';
 import type {CannonMount} from './ship-layout';
@@ -20,45 +21,19 @@ const camera=new T.PerspectiveCamera(55,innerWidth/innerHeight,.3,1800);
 scene.add(new T.HemisphereLight(0xfff0cc,0x287a83,2.4));const sun=new T.DirectionalLight(0xffedcd,2.8);sun.position.set(-100,200,-80);scene.add(sun);
 const mat=(color:number)=>new T.MeshLambertMaterial({color,flatShading:true});
 const wood=mat(0x76503c),deck=mat(0xbb8050),trim=mat(0xf6c96d),dark=mat(0x293e43),cream=mat(0xffedc7),red=mat(0xd85143);
-function mesh(geo:T.BufferGeometry,m:T.Material,x=0,y=0,z=0){const v=new T.Mesh(geo,m);v.position.set(x,y,z);return v;}
-function box(g:T.Group,m:T.Material,w:number,h:number,d:number,x:number,y:number,z:number){g.add(mesh(new T.BoxGeometry(w,h,d),m,x,y,z));}
-function consolidate(g:T.Group){g.updateMatrixWorld(true);const batches=new Map<T.Material,T.BufferGeometry[]>();g.traverse(o=>{if(o instanceof T.Mesh){const geo=o.geometry.clone().applyMatrix4(o.matrixWorld);const m=o.material as T.Material;const a=batches.get(m)||[];a.push(geo);batches.set(m,a);}});const out=new T.Group();for(const [m,gs] of batches){out.add(mesh(mergeGeometries(gs.map(g=>g.index?g.toNonIndexed():g))!,m));for(const g of gs)g.dispose();}g.traverse(o=>{if(o instanceof T.Mesh)o.geometry.dispose();});return out;}
-function makeShip(enemy:boolean,layout:ShipLayout,equipment:Readonly<Equipment>=BASE_EQUIPMENT){
- const g=new T.Group(),w=layout.width/7,extension=(layout.length-16)/2,top=layout.deckRise;
- const hull=new T.Shape();hull.moveTo(-3*w,-7-extension);hull.lineTo(3*w,-7-extension);hull.lineTo(3.5*w,2+extension);hull.lineTo(2.4*w,6+extension);hull.lineTo(0,9+extension);hull.lineTo(-2.4*w,6+extension);hull.lineTo(-3.5*w,2+extension);hull.closePath();
- const geo=new T.ExtrudeGeometry(hull,{depth:2.8,bevelEnabled:true,bevelSegments:1,steps:1,bevelSize:.55,bevelThickness:.4});geo.rotateX(Math.PI/2);g.add(mesh(geo,wood,0,2.2,0));
- box(g,deck,5.6*w,.4,12+extension*2,0,2.4,-.5);
- // Repeated gun decks remain open between low rails so cannon rows stay visible.
- for(let d=0;d<layout.upgrades.decks;d++){
-   box(g,enemy?red:trim,6.3*w,.45,11+extension*2,0,2.8+d*3,-1);
-   box(g,deck,5.5*w,.4,10.5+extension*2,0,3+d*3,-1);
-   if(d>0)for(const x of [-2.5*w,2.5*w])for(const z of [-4-extension,4+extension])box(g,wood,.4,3,.4,x,1.5+d*3,z);
- }
- box(g,wood,4*w,2.3,3,0,3.9+top,-5-extension);box(g,trim,4.5*w,.35,3.6,0,5.2+top,-5-extension);
- for(const z of [-3-extension,3+extension]){g.add(mesh(new T.CylinderGeometry(.17,.25,13,6),wood,0,8+top,z));box(g,wood,10*w,.22,.22,0,12+top,z);const sail=new T.PlaneGeometry(9*w*(1+.04*equipment.sails),6+.45*equipment.sails,4,3);const p=sail.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i);p.setZ(i,Math.sin((x/(9*w)+.5)*Math.PI)*1.1);p.setX(i,x*(.8+.2*(y/6+.5)));}sail.computeVertexNormals();g.add(mesh(sail,enemy?enemySail:playerSail,0,8.7+top,z));box(g,enemy?red:trim,2,.8,.08,1,14.3+top,z);}
- for(const row of layout.rows)for(const mount of row){const x=mount.x+mount.side*1.25;const cannon=mesh(new T.CylinderGeometry(.38+.07*equipment.cannonQuality,.48+.07*equipment.cannonQuality,2.5,7),dark,x,mount.y,mount.z);cannon.rotation.z=Math.PI/2;g.add(cannon);box(g,wood,1,1,1,x+mount.side*.9,mount.y-.4,mount.z);}
- // Equipment is rebuilt only on purchase, then merged with the hull by material.
- for(let level=0;level<equipment.reinforcement;level++)for(const side of [-1,1])box(g,trim,.18,.18,10+extension*2,side*3*w,1.1+level*.4,-1);
- for(let level=0;level<equipment.sails;level++)for(const z of [-3-extension,3+extension]){box(g,wood,(7-level)*w,.15,.15,0,14.4+top+level*1.7,z);g.add(mesh(new T.PlaneGeometry((6-level)*w,1.3),enemy?enemySail:playerSail,0,13.8+top+level*1.7,z));}
- const wheel=mesh(new T.TorusGeometry(.55+.12*equipment.helm,.1,4,8),trim,0,5.9+top,-5.8-extension);g.add(wheel);
- box(g,wood,.35,1.3, .35,0,5.3+top,-5.8-extension);box(g,dark,.35,1.8+.35*equipment.helm,1+.3*equipment.helm,0,.5,-7.5-extension);
- const anchorSize=1+.18*equipment.anchor;
- for(const side of [-1,1]){box(g,dark,.2,1.6*anchorSize,.2,side*(3.5*w+.25),2.2,3+extension);box(g,dark,1.2*anchorSize,.2,.25,side*(3.5*w+.25),1.4,3+extension);}
- g.add(mesh(new T.CylinderGeometry(.4+.12*equipment.anchor,.5+.12*equipment.anchor,.8,6),trim,0,3.7+top,-3-extension));
- return consolidate(g);
-}
 // Player-only sail material: fading must never affect enemy ships or hull trim.
 const playerSail=cream.clone(),enemySail=red.clone();playerSail.side=enemySail.side=T.DoubleSide;
 playerSail.transparent=true;playerSail.depthWrite=false;
+const shipMaterials={wood,deck,trim,dark,playerSail,enemySail,red};
 const shipTemplates=new Map<string,T.Group>();
 // Entity records share module state; player is also a member of ships.
 type Ship={group:T.Group,layout:ShipLayout,stats:ShipStats,x:number,z:number,yaw:number,speed:number,hp:number,scale:number,enemy:boolean,cool:number[],state:string,phase:number,vy:number};
 const ships:Ship[]=[];let player:Ship;
-function disposePlayerGeometry(group:T.Group){group.traverse(o=>{if(o instanceof T.Mesh)o.geometry.dispose();});}
+const disposePlayerGeometry=disposeGeometry;
 function shipGroup(enemy:boolean,layout:ShipLayout,equipment:Readonly<Equipment>){
- if(!enemy)return makeShip(false,layout,equipment);
- const key=JSON.stringify([layout.upgrades,layout.armament]);let template=shipTemplates.get(key);
- if(!template){template=makeShip(true,layout,equipment);shipTemplates.set(key,template);}return template.clone();
+ if(!enemy)return makeShip(false,layout,equipment,shipMaterials);
+ const key=JSON.stringify([layout.upgrades,layout.armament,equipment]);let template=shipTemplates.get(key);
+ if(!template){template=makeShip(true,layout,equipment,shipMaterials);shipTemplates.set(key,template);}return template.clone();
 }
 function spawnShip(x:number,z:number,enemy:boolean,scale=1,layout=BASE_SHIP){
  const equipment=enemy?BASE_EQUIPMENT:progress.upgrades,stats=enemy?{...statsFor(freshProgress()),maxHp:65,damage:9,reload:4.5}:statsFor(progress);
@@ -105,7 +80,7 @@ window.addEventListener('keydown',e=>{
  if(controlled.includes(e.code)&&running){e.preventDefault();keys.add(e.code);if(!e.repeat){if(e.code==='Space')firePlayer();if(e.code==='ArrowUp')elevation=Math.min(55,elevation+1);if(e.code==='ArrowDown')elevation=Math.max(5,elevation-1);}}
  if(e.code==='Escape'&&!e.repeat&&started&&!dead)togglePause();
 });window.addEventListener('keyup',e=>keys.delete(e.code));
-canvas.addEventListener('pointerdown',e=>{if(e.button===0&&running){mouseFire=true;firePlayer();}});window.addEventListener('pointerup',()=>mouseFire=false);canvas.addEventListener('contextmenu',e=>e.preventDefault());
+canvas.addEventListener('pointerdown',e=>{if(e.button===0&&running){mouseFire=true;firePlayer();}});window.addEventListener('pointerup',()=>mouseFire=false);window.addEventListener('pointercancel',()=>mouseFire=false);canvas.addEventListener('contextmenu',e=>e.preventDefault());
 canvas.addEventListener('wheel',e=>{if(running){e.preventDefault();elevation=T.MathUtils.clamp(elevation-Math.sign(e.deltaY)*2,5,55);}},{passive:false});
 function clearInput(){keys.clear();mouseFire=false;side=0;}
 window.addEventListener('blur',()=>{clearInput();if(running)pause();});document.addEventListener('visibilitychange',()=>{if(document.hidden&&running)pause();});
@@ -173,10 +148,12 @@ function updateArc(){
  }
  targets.count=mounts.length;targets.instanceMatrix.needsUpdate=true;arcGeo.setDrawRange(0,n/3);arcGeo.attributes.position.needsUpdate=true;
 }
+// Scratch vectors never escape a simulation step or become entity-owned.
+const previousShotPosition=new T.Vector3(),collisionCenter=new T.Vector3();
 // Fixed-step order is gameplay-sensitive; see docs/dutchman.md before reordering.
 function simulate(dt:number){time+=dt;waterUniform.value=time;side=aimSide();if(keys.has('ArrowUp'))elevation=Math.min(55,elevation+24*dt);if(keys.has('ArrowDown'))elevation=Math.max(5,elevation-24*dt);
  if(mouseFire||keys.has('Space'))firePlayer();
- for(const s of [...ships]){s.cool=s.cool.map(c=>Math.max(0,c-dt));let steer=0,desired=0;
+ for(const s of ships){s.cool[0]=Math.max(0,s.cool[0]-dt);s.cool[1]=Math.max(0,s.cool[1]-dt);let steer=0,desired=0;
  if(!s.enemy){desired=keys.has('KeyW')?s.stats.maxSpeed:keys.has('KeyS')?0:Math.max(0,s.speed-2*dt);steer=(keys.has('KeyA')?1:0)-(keys.has('KeyD')?1:0);}else{const dx=player.x-s.x,dz=player.z-s.z,dist=Math.hypot(dx,dz);const heading=Math.atan2(dx,dz);s.state=!protectedShip(player)&&!protectedShip(s)&&dist<210?'engage':'patrol';let wanted=s.yaw+Math.sin(time*.12+s.phase)*.4;desired=8;
  if(s.state==='engage'){wanted=heading+(dist<145?Math.PI/2:0);desired=dist<100?7:12;const rel=angleDelta(heading,s.yaw);const bs=rel>0?-1:1;const error=Math.abs(Math.abs(rel)-Math.PI/2);if(dist<185&&dist>30&&error<.22){const angle=Math.asin(Math.min(.95,dist*9.81/(s.stats.muzzleSpeed*s.stats.muzzleSpeed)))/2;fire(s,bs,angle);}}
  for(const i of islands){if(Math.hypot(s.x-i.x,s.z-i.z)<i.r+65){wanted=Math.atan2(s.x-i.x,s.z-i.z);desired=7;}}
@@ -193,10 +170,10 @@ function simulate(dt:number){time+=dt;waterUniform.value=time;side=aimSide();if(
  // Separation can push a hull; reapply the protected perimeter before projectile tests.
  for(const s of ships){if(s.enemy){const safe=outsideHarbour(s,s.layout.collisionRadius*s.scale+1);s.x=safe.x;s.z=safe.z;if(protectedShip(player))s.state='patrol';}s.group.position.x=s.x;s.group.position.z=s.z;}
  for(let j=shots.length-1;j>=0;j--){
-   const shot=shots[j],old=shot.mesh.position.clone(),previous=shot.age;shot.age=time-shot.launchTime;
+   const shot=shots[j],old=previousShotPosition.copy(shot.mesh.position),previous=shot.age;shot.age=time-shot.launchTime;
    const p=ballistic(shot.origin,shot.velocity,shot.age),hit=trajectoryImpact(shot.origin,shot.velocity,previous,shot.age,shot.launchTime,shotObstacles);
    shot.mesh.position.copy(hit?hit.point:p);let remove=crossesHarbour(old,shot.mesh.position);
-   if(!remove)for(const ship of [...ships]){if(ship===shot.owner||protectedShip(ship))continue;const center=ship.group.position.clone();center.y+=(2.5+ship.layout.deckRise/2)*ship.scale;
+   if(!remove)for(const ship of ships){if(ship===shot.owner||protectedShip(ship))continue;const center=collisionCenter.copy(ship.group.position);center.y+=(2.5+ship.layout.deckRise/2)*ship.scale;
      if(segmentSphere(old,shot.mesh.position,center,Math.max(5*ship.layout.collisionRadius/7,2.5+ship.layout.deckRise/2)*ship.scale)){ship.hp-=shot.damage;burst(shot.mesh.position,true);if(ship===player)notice('Incoming fire! Keep moving.');if(ship.hp<=0)sink(ship);remove=true;break;}}
    if(!remove&&hit){burst(shot.mesh.position);remove=true;}
    if(shot.age>SHOT_LIFETIME||Math.abs(p.x)>750||Math.abs(p.z)>750)remove=true;
@@ -211,9 +188,9 @@ const map=$('map') as HTMLCanvasElement,ctx=map.getContext('2d')!;
 function drawMap(){ctx.clearRect(0,0,180,180);ctx.strokeStyle='#729c9430';ctx.lineWidth=1;for(let i=0;i<=180;i+=30){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,180);ctx.moveTo(0,i);ctx.lineTo(180,i);ctx.stroke();}const point=(x:number,z:number)=>chartPoint(x,z,WORLD);const [hx,hy]=point(HARBOUR.x,HARBOUR.z);ctx.fillStyle='#a9dab62b';ctx.strokeStyle='#a9dab6';ctx.beginPath();ctx.arc(hx,hy,HARBOUR.radius/WORLD*85,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle='#fff3cc';ctx.font='10px sans-serif';ctx.fillText('P',hx-3,hy+3);for(const i of islands){const [x,y]=point(i.x,i.z);ctx.fillStyle='#7d9c78';ctx.beginPath();ctx.arc(x,y,i.r/WORLD*85,0,Math.PI*2);ctx.fill();}for(const l of loot){const[x,y]=point(l.x,l.z);ctx.fillStyle='#ffd078';ctx.fillRect(x-1.5,y-1.5,3,3);}for(const s of ships){const[x,y]=point(s.x,s.z);ctx.save();ctx.translate(x,y);ctx.rotate(chartHeading(s.yaw));ctx.fillStyle=s.enemy?'#f38770':'#fff3cc';ctx.beginPath();ctx.moveTo(0,-5);ctx.lineTo(-3,3);ctx.lineTo(3,3);ctx.closePath();ctx.fill();ctx.restore();}ctx.strokeStyle='#94b7a65c';ctx.strokeRect(5,5,170,170);}
 function hud(){ $('health').style.width=`${Math.max(0,player.hp/player.stats.maxHp*100)}%`;$('health-label').textContent=`${Math.max(0,Math.ceil(player.hp))} / ${player.stats.maxHp}`;$('score').textContent=String(progress.wallet).padStart(4,'0');$('kills').textContent=String(kills);$('best').textContent=String(best);$('angle').textContent=String(Math.round(elevation));$('speed').textContent=`${Math.round(player.speed*1.94)} KNOTS`;$('view-label').textContent=side<0?'PORT VIEW':side>0?'STARBOARD VIEW':'CHASE VIEW';for(const [idx,id] of ['port','starboard'].entries()){const c=player.cool[idx];$(id+'-bar').style.width=`${100*(1-c/player.stats.reload)}%`;$(id+'-label').textContent=c>0?`RELOADING ${c.toFixed(1)}s`:'READY';$(id).classList.toggle('active',side===(idx?1:-1));}$('gun-count').textContent=`${progress.guns.port} port / ${progress.guns.starboard} starboard`;$('enter-port').hidden=!running||!canDock(player);if(!$('ship-details').hidden)renderShipStats(progress,player.hp,score);drawMap();}
 // Rendering continues during pause; only running voyages advance fixed-step combat.
-let last=performance.now(),accumulator=0,uiClock=0;const look=new T.Vector3();
+let last=performance.now(),accumulator=0,uiClock=0;const look=new T.Vector3(),cameraDesired=new T.Vector3(),cameraAim=new T.Vector3();
 function frame(now:number){requestAnimationFrame(frame);const dt=Math.min(.08,(now-last)/1000);last=now;if(running){accumulator+=dt;while(accumulator>=1/60&&running){simulate(1/60);accumulator-=1/60;}}else accumulator=0;
- if(!started){time+=dt;waterUniform.value=time;for(const s of ships){s.group.position.set(s.x,waveHeight(s.x,s.z,time),s.z);s.group.rotation.y=s.yaw;}const a=.5+Math.sin(time*.08)*.12;camera.position.set(player.x+Math.sin(a)*60,29,player.z-Math.cos(a)*60);camera.lookAt(player.x,5,player.z+10);}else{const f=direction(player.yaw),r=direction(player.yaw-Math.PI/2);const desired=player.group.position.clone().addScaledVector(f,side?-player.layout.length*.5:-35-(player.layout.length-16)*1.2).addScaledVector(r,side?side*(player.layout.width*.5+1):0);desired.y+=side?10+player.layout.deckRise:23+player.layout.deckRise+progress.upgrades.sails*1.5;camera.position.lerp(desired,1-Math.exp(-5*dt));const aim=player.group.position.clone().addScaledVector(side?r:f,side?side*65:18);aim.y+=side?5:2+player.layout.deckRise*.5;look.lerp(aim,1-Math.exp(-7*dt));camera.lookAt(look);}playerSail.opacity=T.MathUtils.damp(playerSail.opacity,running&&side!==0?.2:1,8,dt);updateArc();uiClock+=dt;if(uiClock>.1){hud();uiClock=0;}renderer.render(scene,camera);}
+ if(!started){time+=dt;waterUniform.value=time;for(const s of ships){s.group.position.set(s.x,waveHeight(s.x,s.z,time),s.z);s.group.rotation.y=s.yaw;}const a=.5+Math.sin(time*.08)*.12;camera.position.set(player.x+Math.sin(a)*60,29,player.z-Math.cos(a)*60);camera.lookAt(player.x,5,player.z+10);}else{const f=direction(player.yaw),r=direction(player.yaw-Math.PI/2);const desired=cameraDesired.copy(player.group.position).addScaledVector(f,side?-player.layout.length*1.4:-35-(player.layout.length-16)*1.2).addScaledVector(r,side?-side*(24+player.layout.width):0);desired.y+=side?48+player.layout.deckRise:23+player.layout.deckRise+progress.upgrades.sails*1.5;camera.position.lerp(desired,1-Math.exp(-5*dt));const aim=cameraAim.copy(player.group.position).addScaledVector(side?r:f,side?side*22:18);aim.y+=side?2+player.layout.deckRise*.5:2+player.layout.deckRise*.5;look.lerp(aim,1-Math.exp(-7*dt));camera.lookAt(look);}playerSail.opacity=T.MathUtils.damp(playerSail.opacity,running&&side!==0?.2:1,8,dt);updateArc();uiClock+=dt;if(uiClock>.1){hud();uiClock=0;}renderer.render(scene,camera);}
 window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
 canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();if(shipyard.dialog.open)shipyard.close();pause();$('overlay-copy').textContent='The graphics connection was interrupted. Reload this page to sail again.';($('start') as HTMLButtonElement).disabled=true;});
 requestAnimationFrame(frame);
