@@ -4,33 +4,33 @@ This repository hosts Daniel Vaško's static portfolio and **Dutchman**, a deskt
 
 ## Read narrowly
 
-- Game change: start with the task table below, then inspect the named symbols in `dutchman-source/src/main.ts`. Most game systems intentionally coexist in that one module; do not assume separate entity/system directories.
-- Read [docs/dutchman.md](docs/dutchman.md) for update ordering, coupled behavior, constants, and verification. Do not scan generated bundles to understand the game.
-- Portfolio-only change: read the relevant HTML page and `assets/css/styles.css`; game source is unrelated.
+- Game change: start with the task table below, then inspect the named symbols in `games/dutchman/source/src/main.ts`. Most game systems intentionally coexist in that one module; do not assume separate entity/system directories.
+- Read [games/dutchman/docs/dutchman.md](games/dutchman/docs/dutchman.md) for update ordering, coupled behavior, constants, and verification. Do not scan generated bundles to understand the game.
+- Portfolio-only change: read the relevant HTML page and `portfolio/assets/css/styles.css`; game source is unrelated.
 - Keep this map updated when responsibilities change. Preserve working timing, signs, balance and update order unless the requested task explicitly changes them. Document awkward coupling before extracting or redesigning it.
 
 ## Files and entry points
 
 | Path | Responsibility |
 | --- | --- |
-| `index.html`, `pages/*.html` | Portfolio pages. Homepage button and Projects page link into `games/dutchman/`. |
+| `portfolio/index.html`, `portfolio/pages/*.html` | Portfolio pages. Homepage button and Projects page link into `games/dutchman/`. |
 | `assets/css/styles.css` | Portfolio styling, independent of game styling. |
-| `js/app.js` | Portfolio navigation, contact links, year, project-list initialization. |
-| `js/services/projectService.js`, `data/projects.json`, `js/components/projectList.js` | Fetch project data and render cards/optional game link. URLs in cards resolve relative to the consuming page. |
-| `dutchman-source/index.html` | Game HTML shell, canvas, HUD, intro/pause/death overlay; loads `/src/main.ts`. IDs are a contract with `$()` in the main module. |
-| `dutchman-source/src/main.ts` | Scene setup, procedural assets, shared entity/state arrays, input, simulation, UI, audio and frame loop. |
-| `dutchman-source/src/ship-layout.ts` | `ShipLayout`, capped dimensions/decks, per-side installed gun counts, shared muzzle rows, firing-side selection and chart coordinates. |
-| `dutchman-source/src/progression.ts` | Versioned wallet/upgrade saves, nine-category catalogue, prices/prerequisites, atomic paired or one-side purchases, derived movement/combat stats, starting elevation and muzzle speed. |
-| `dutchman-source/src/harbour.ts` | Safe perimeter, dock interaction range, spawn position, port obstacles, segment crossing and enemy exclusion. |
-| `dutchman-source/src/shipyard-ui.ts` | Shop dialog rendering, purchase previews, optional ship-stat panel; callbacks connect it to the game. |
-| `dutchman-source/src/physics.ts` | `WORLD`, normalized `WAVES`, `waveHeight`, `ballistic`, `trajectoryImpact`, `angleDelta`, `segmentSphere`; pure math without DOM. |
-| `dutchman-source/src/style.css` | Game layout, HUD, overlays, responsive rules, Google Fonts with fallbacks. |
-| `dutchman-source/public/` | Files copied unchanged into the build; currently Three.js license only. Models and sounds are generated in code. |
-| `dutchman-source/tests/physics.test.ts` | Original math tests; `tests/ship-layout.test.ts` additionally checks caps, gun spacing, map headings and cached trajectory equivalence. `tests/progression.test.ts` covers purchases, saves, protection and preview/live impact agreement. |
-| `dutchman-source/package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `tsconfig.json`, `vite.config.js` | Commands, pinned dependencies, esbuild permission, strict TS settings and static build destination. |
-| `games/dutchman/` | **Generated, committed deployment output.** Edit source and rebuild; never hand-edit hashed JS/CSS or generated HTML. |
+| `portfolio/js/app.js` | Portfolio navigation, contact links, year, project-list initialization. |
+| `portfolio/js/services/projectService.js`, `portfolio/data/projects.json`, `portfolio/js/components/projectList.js` | Fetch project data and render cards/optional game link. URLs in cards resolve relative to the consuming page. |
+| `games/dutchman/source/index.html` | Game HTML shell, canvas, HUD, intro/pause/death overlay; loads `/src/main.ts`. IDs are a contract with `$()` in the main module. |
+| `games/dutchman/source/src/main.ts` | Scene setup, shared entity/state arrays, input, simulation, UI, audio and frame loop. Ship models and geometry ownership are in ship-model.ts and rendering.ts. |
+| `games/dutchman/source/src/ship-layout.ts` | `ShipLayout`, capped dimensions/decks, per-side installed gun counts, shared muzzle rows, firing-side selection and chart coordinates. |
+| `games/dutchman/source/src/progression.ts` | Versioned wallet/upgrade saves, nine-category catalogue, prices/prerequisites, atomic paired or one-side purchases, derived movement/combat stats, starting elevation and muzzle speed. |
+| `games/dutchman/source/src/harbour.ts` | Safe perimeter, dock interaction range, spawn position, port obstacles, segment crossing and enemy exclusion. |
+| `games/dutchman/source/src/shipyard-ui.ts` | Shop dialog rendering, purchase previews, optional ship-stat panel; callbacks connect it to the game. |
+| `games/dutchman/source/src/physics.ts` | `WORLD`, normalized `WAVES`, `waveHeight`, `ballistic`, `trajectoryImpact`, `angleDelta`, `segmentSphere`; pure math without DOM. |
+| `games/dutchman/source/src/style.css` | Game layout, HUD, overlays, responsive rules, Google Fonts with fallbacks. |
+| `games/dutchman/source/public/` | Files copied unchanged into the build; currently Three.js license only. Models and sounds are generated in code. |
+| `games/dutchman/source/tests/physics.test.ts` | Original math tests; `tests/ship-layout.test.ts` additionally checks caps, gun spacing, map headings and cached trajectory equivalence. `tests/progression.test.ts` covers purchases, saves, protection and preview/live impact agreement. |
+| `games/dutchman/source/package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `tsconfig.json`, `vite.config.js` | Commands, pinned dependencies, esbuild permission, strict TS settings and static build destination. |
+| `games/dutchman/` | Game entry point; source/ and docs/ are authored, dist/ is **generated, committed deployment output.** Edit source and rebuild; never hand-edit hashed JS/CSS or generated HTML. |
 
-## Task → symbols to inspect in `dutchman-source/src/main.ts`
+## Task → symbols to inspect in `games/dutchman/source/src/main.ts`
 
 | Task | Start here; follow these dependencies |
 | --- | --- |
@@ -51,7 +51,7 @@ This repository hosts Daniel Vaško's static portfolio and **Dutchman**, a deskt
 
 ## Run and verify
 
-From `dutchman-source/`, using Node **22.18+** and pnpm:
+From `games/dutchman/source/`, using Node **22.18+** and pnpm:
 
 ```sh
 pnpm install --frozen-lockfile
@@ -61,6 +61,14 @@ pnpm build
 
 `pnpm dev` serves the game alone. For deployment paths and portfolio links, serve the repository root with `python -m http.server 5173 --bind 127.0.0.1`, then open `http://127.0.0.1:5173/games/dutchman/`. Do not open HTML via `file://`.
 
-Vite uses relative asset URLs and empties **only `games/dutchman/`** when building. Commit source and corresponding build output for runtime changes. Keep deployment configuration unchanged unless needed. On restricted Windows environments, the native Vite config loader is already configured; if dev dependency prebundling fails, test the production build with the static server instead.
+Vite uses relative asset URLs and empties **only `games/dutchman/dist/`** when building. Commit source and corresponding build output for runtime changes. Keep deployment configuration unchanged unless needed. On restricted Windows environments, the native Vite config loader is already configured; if dev dependency prebundling fails, test the production build with the static server instead.
 
-Minimum checks: tests, build/typecheck, `git diff --check`, then the manual checklist in `docs/dutchman.md`. For comments/docs-only changes, compare rebuilt output to the committed output as strong evidence of unchanged runtime behavior. Do not claim full gameplay coverage from the unit tests.
+Minimum checks: tests, build/typecheck, `git diff --check`, then the manual checklist in `games/dutchman/docs/dutchman.md`. For comments/docs-only changes, compare rebuilt output to the committed output as strong evidence of unchanged runtime behavior. Do not claim full gameplay coverage from the unit tests.
+
+## Extracted rendering modules
+
+- games/dutchman/source/src/ship-model.ts: makeShip builds owned geometry using an injected material palette, ShipLayout and Equipment.
+- games/dutchman/source/src/rendering.ts: mesh/box helpers, consolidate and disposeGeometry. Materials are borrowed; consolidate consumes input geometry.
+- games/dutchman/source/tests/rendering.test.ts: resource ownership, geometry bounds and base/asymmetric/maximum upgraded model coverage.
+
+Root index.html redirects to portfolio/. The game entry point games/dutchman/index.html redirects to dist/. Keep both entry points outside Vite output. All game dependencies and tests live in games/dutchman/source/.

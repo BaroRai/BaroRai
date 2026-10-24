@@ -22,9 +22,9 @@ static repository or fetched for display to portfolio visitors.
 ## Architecture
 
 ```text
-UI (index.html, js/components)
+UI (portfolio/index.html, portfolio/js/components)
            ↓
-Services (js/services)
+Services (portfolio/js/services)
            ↓
 Local JSON now; GitHub API or an external backend later
 ```
@@ -33,4 +33,14 @@ GitHub Pages is a static host and cannot safely store login credentials or accep
 
 ## Dutchman and agent navigation
 
-See [AGENTS.md](AGENTS.md) for the repository map and [dutchman-source/README.md](dutchman-source/README.md) for game build and play instructions. Edit game source in `dutchman-source/`, not generated files in `games/dutchman/`.
+See [AGENTS.md](AGENTS.md) for the repository map and [games/dutchman/source/README.md](games/dutchman/source/README.md) for game build and play instructions. Edit game source in `games/dutchman/source/`, not generated files in `games/dutchman/dist/`.
+
+## Repository layout
+
+- portfolio/: static HTML pages, styles, scripts and project data; no game dependencies.
+- games/dutchman/source/: game source, dependencies, tests and build configuration.
+- games/dutchman/docs/: game architecture and verification notes.
+- games/dutchman/dist/: generated, committed production game.
+- index.html and games/dutchman/index.html: stable entry-point redirects.
+
+Build from games/dutchman/source/ using Node 22.18+ and pnpm: pnpm install --frozen-lockfile, pnpm test, pnpm build. Serve the repository root to test both applications together. On Windows without symlink privileges, pnpm 10 with --node-linker=hoisted can install the same frozen lockfile. Direct portfolio page URLs now start with portfolio/pages/.

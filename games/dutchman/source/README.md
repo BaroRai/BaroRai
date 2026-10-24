@@ -12,9 +12,9 @@ pnpm test
 pnpm build
 ```
 
-The build writes only to `../games/dutchman`. Serve the portfolio root with `python -m http.server 5173` and open `/games/dutchman/`. This also verifies the portfolio return link. `pnpm dev` provides a development server for the game alone.
+The build writes only to `../dist`. Serve the repository root with `python -m http.server 5173` and open `/games/dutchman/`. This also verifies the portfolio return link. `pnpm dev` provides a development server for the game alone.
 
-The generated game is committed so the existing GitHub Pages branch publishing setup can serve it without introducing a new deployment workflow. Rebuild and commit source plus output for each change. Asset paths are relative and work under `/BaroRai/games/dutchman/`. The rest of the portfolio has no game dependencies. Portfolio integration consists of the homepage Try Dutchman button, one project entry and optional project-link rendering.
+The generated game is committed so the existing GitHub Pages branch publishing setup can serve it without introducing a new deployment workflow. Rebuild and commit source plus output for each change. Asset paths are relative and work under `/BaroRai/games/dutchman/dist/`. The rest of the portfolio has no game dependencies. Portfolio integration consists of the homepage Try Dutchman button, one project entry and optional project-link rendering.
 
 ## Controls
 
@@ -30,8 +30,10 @@ Enemy states are patrol and engage, with island avoidance and broadside alignmen
 
 `src/physics.ts`: world extent and wave directions/amplitudes/wavelengths/speeds. `src/progression.ts`: upgrade catalogue, prices, derived stats and versioned saving. `src/harbour.ts`: protected water and dock rules. `src/shipyard-ui.ts`: shop and expanded stats. `src/ship-layout.ts`: capped hull dimensions, decks, per-side installed cannons and minimap coordinates. `src/main.ts`: procedural model construction, movement, enemy engagement radius, muzzle speed, damage, reload durations, loot rewards and island layout. `src/style.css`: presentation. `tests/physics.test.ts` checks wave/render alignment, ballistic flight, swept hits and angular wrapping. `tests/ship-layout.test.ts` checks upgrade bounds, cannon spacing, map direction, firing selection and cached trajectory equivalence. `tests/progression.test.ts` checks purchases, persistence, safe-zone geometry and impact prediction. Nine categories can be purchased at port; hull changes add slots, and paired cannon purchases fill one slot on each side. Unspent doubloons and upgrades survive sinking/reload; voyage score remains separate.
 
-Three.js is MIT licensed; see `../games/dutchman/THIRD_PARTY_LICENSES.txt`.
+Three.js is MIT licensed; see `../dist/THIRD_PARTY_LICENSES.txt`.
 
 ## Agent documentation
 
-Start with [AGENTS.md](../AGENTS.md) for task-to-symbol routing. See [the implementation notes](../docs/dutchman.md) for lifecycle, constants, fragile behavior and manual verification.
+Start with [AGENTS.md](../../../AGENTS.md) for task-to-symbol routing. See [the implementation notes](../docs/dutchman.md) for lifecycle, constants, fragile behavior and manual verification.
+
+Ship geometry is built in src/ship-model.ts from ShipLayout and Equipment. src/rendering.ts owns geometry batching/disposal; it borrows materials. These modules have no dependency on game state or the DOM. The build only empties ../dist; it never removes source or docs. Serve the repository root for portfolio navigation; the game-only dev server does not serve portfolio/.
