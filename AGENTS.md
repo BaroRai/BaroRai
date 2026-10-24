@@ -1,6 +1,6 @@
 # Repository map for coding agents
 
-This repository hosts Daniel Vaško's static portfolio and **Dutchman**, a desktop single-player Three.js naval game inspired by the Unity project Naglfar. There is no backend, runtime AI service, Unity runtime, or level/campaign system here.
+This repository hosts Daniel Vaško's static portfolio and **Dutchman**, a desktop single-player Three.js naval game inspired by the Unity project Naglfar. There is no backend, runtime AI service, Unity runtime, or campaign service here.
 
 ## Read narrowly
 
@@ -14,7 +14,7 @@ This repository hosts Daniel Vaško's static portfolio and **Dutchman**, a deskt
 | Path | Responsibility |
 | --- | --- |
 | `portfolio/index.html`, `portfolio/pages/*.html` | Portfolio pages. Homepage button and Projects page link into `games/dutchman/`. |
-| `assets/css/styles.css` | Portfolio styling, independent of game styling. |
+| `portfolio/assets/css/styles.css` | Portfolio styling, independent of game styling. |
 | `portfolio/js/app.js` | Portfolio navigation, contact links, year, project-list initialization. |
 | `portfolio/js/services/projectService.js`, `portfolio/data/projects.json`, `portfolio/js/components/projectList.js` | Fetch project data and render cards/optional game link. URLs in cards resolve relative to the consuming page. |
 | `games/dutchman/source/index.html` | Game HTML shell, canvas, HUD, intro/pause/death overlay; loads `/src/main.ts`. IDs are a contract with `$()` in the main module. |
@@ -42,11 +42,11 @@ This repository hosts Daniel Vaško's static portfolio and **Dutchman**, a deskt
 | Enemy behavior | Enemy branch of `simulate`: patrol/engage, aiming, island avoidance, boundary steering. |
 | Collision / buoyancy | Ship/island and ship/ship loops, float samples, projectile loop inside `simulate`; `waveHeight`, `segmentSphere` in `physics.ts`. |
 | Weapon change | `ShipLayout.rows`/`mounts` in `ship-layout.ts`; `muzzleSpeed`, `Shot`, `shotData`, `firePlayer`, `fire`, `updateArc`, projectile loop, enemy aiming formula, `hud` reload display; `ballistic`/`trajectorySamples`/`trajectoryImpact` in `physics.ts`. |
-| Score / progression | `sink`, loot loop of `simulate`, `score`, `kills`, `best`, `reset`, `hud`. Voyage score/best is separate from `progress.wallet`; upgrades persist through death; enemies are replenished without level scaling. |
+| Score / progression | `sink`, loot loop of `simulate`, `score`, `kills`, `best`, `reset`, `hud`. Voyage score/best is separate from `progress.wallet`; upgrades persist through death; enemies are replenished to the active region's fleet cap. |
 | HUD / minimap | `hud`, `drawMap`, `notice`; `chartPoint`/`chartHeading` in `ship-layout.ts`; state is read directly from module globals and entity arrays. Also inspect HTML IDs and CSS. |
 | Menus / restart | `running`, `started`, `dead`, start/pause click handlers, `pause`, `resume`, `reset`, player branch of `sink`; overlay HTML and body classes in CSS. |
 | Rendering / ocean | Renderer/scene initialization, `waveGLSL`, `waterMaterial`, `waterUniform`, `frame`; `WAVES`/`waveHeight` in `physics.ts`. |
-| Models / map / effects | `ShipLayout` dimensions in `ship-layout.ts`; `mat`, `mesh`, `box`, `consolidate`, `makeShip`, `shipTemplates`, `islands`, buoy/crate templates, `burst`, effect loop. No asset-loader pipeline. |
+| Models / map / effects | `ShipLayout` dimensions in `ship-layout.ts`; `mat`, `mesh`, `box`, `consolidate`, `makeShip`, `EnemyModels`, `islands`, buoy/crate templates, `burst`, effect loop. No asset-loader pipeline. |
 | Audio / persistence | `tone`, sound click handler, `audio`/`sound`; best-score load/write at `dutchman-best`; versioned wallet/upgrades at `dutchman-progress-v1` via `progression.ts`. Position, health and current voyage are not saved. |
 
 ## Run and verify
@@ -72,3 +72,12 @@ Minimum checks: tests, build/typecheck, `git diff --check`, then the manual chec
 - games/dutchman/source/tests/rendering.test.ts: resource ownership, geometry bounds and base/asymmetric/maximum upgraded model coverage.
 
 Root index.html redirects to portfolio/. The game entry point games/dutchman/index.html redirects to dist/. Keep both entry points outside Vite output. All game dependencies and tests live in games/dutchman/source/.
+
+## Region ownership and travel
+
+- src/regions.ts (under games/dutchman/source): five region definitions, topology, enemy profiles, arrival clearance, recommendations and isolated region save.
+- src/region-world.ts: one region scene, procedural islands/port, instanced buoys and owned graphics disposal.
+- src/region-slot.ts: dispose the old region before constructing the next. Never cache inactive scene objects.
+- src/enemy-models.ts: only active-region NPC templates; dispose after detaching clones. Shared global materials are borrowed.
+- main.ts: openTravel/confirmTravel, clearRegionEntities/installRegion, fleet spawning and active collision arrays. Preserve the player object and modular upgrade data during travel.
+- tests/regions.test.ts: topology, arrivals, readiness, persistence and resource lifecycle. tests/region-memory.html is the Vite-served browser resource harness.
